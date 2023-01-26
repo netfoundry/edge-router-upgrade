@@ -30,7 +30,8 @@ jobs:
       id: version
       
     - name: Tar bootstrap
-      run: cd dist; tar -zcvf router_upgrade_bootstrap.tar.gz router_upgrade
+      # tar with previous distibuted name for backwards compatibility
+      run: cd dist; mv router_upgrade zt-upgrade; tar -zcvf router_upgrade_bootstrap.tar.gz zt-upgrade
     - name: release
       uses: actions/create-release@v1
       id: release
