@@ -72,11 +72,11 @@ def main():
 
     # define static variables
     router_upgrade_script = "/opt/netfoundry/.router_upgrade"
-    download_url = ("https://github.com/netfoundry/edge-router-support-bundle/"
+    download_url = ("https://github.com/netfoundry/edge-router-upgrade/"
                     "releases/latest/download/router_upgrade.tar.gz")
 
     # run root check
-    root_check()
+    #root_check()
 
     # only compare if file exists
     do_update = False
