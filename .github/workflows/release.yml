@@ -24,14 +24,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - name: Use pyinstall to create distribution binary
-      run: pyinstaller -F router_upgrade.py
+      run: pyinstaller -F router_upgrade_bootstrap.py
     - name: version
-      run: echo "::set-output name=version::$(echo 4.1.0)"
+      run: echo "::set-output name=version::$(echo 1.0.0)"
       id: version
       
     - name: Tar bootstrap
       # tar with previous distibuted name for backwards compatibility
-      run: cd dist; mv router_upgrade zt-upgrade; tar -zcvf router_upgrade_bootstrap.tar.gz zt-upgrade
+      run: cd dist; mv router_upgrade_bootstrap zt-upgrade; tar -zcvf router_upgrade_bootstrap.tar.gz zt-upgrade
     - name: release
       uses: actions/create-release@v1
       id: release
