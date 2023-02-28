@@ -28,7 +28,7 @@ jobs:
     - name: Use pyinstall to create main binary
       run: pyinstaller -F router_upgrade.py  
     - name: version
-      run: echo "::set-output name=version::$(./dist/router_upgrade -v)"
+      run: echo "version=$(./dist/router_upgrade -v)" >> $GITHUB_ENV
       id: version
       
     - name: Tar bootstrap
@@ -43,8 +43,8 @@ jobs:
       with:
         draft: false
         prerelease: false
-        release_name: v${{ steps.version.outputs.version }}
-        tag_name: v${{ steps.version.outputs.version }}
+        release_name: v${{ env.version }}
+        tag_name: v${{ env.version }}
       env:
         GITHUB_TOKEN: ${{ github.token }}
 
