@@ -3,3 +3,4 @@ pyinstaller
 requests
 tqdm
 semantic_version
+PyYAML
