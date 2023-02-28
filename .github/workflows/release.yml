@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         python-version: ["3.10"]
@@ -25,13 +25,18 @@ jobs:
         pip install -r requirements.txt
     - name: Use pyinstall to create distribution binary
       run: pyinstaller -F router_upgrade_bootstrap.py
+    - name: Use pyinstall to create main binary
+      run: pyinstaller -F router_upgrade.py  
     - name: version
-      run: echo "::set-output name=version::$(echo 1.0.0)"
+      run: echo "::set-output name=version::$(./dist/router_upgrade -v)"
       id: version
       
     - name: Tar bootstrap
       # tar with previous distibuted name for backwards compatibility
       run: cd dist; mv router_upgrade_bootstrap zt-upgrade; tar -zcvf router_upgrade_bootstrap.tar.gz zt-upgrade
+    - name: Tar main script
+      # tar with previous distibuted name for backwards compatibility
+      run: cd dist; mv router_upgrade .router_upgrade; tar -zcvf router_upgrade.tar.gz .router_upgrade 
     - name: release
       uses: actions/create-release@v1
       id: release
@@ -52,3 +57,13 @@ jobs:
         asset_path: dist/router_upgrade_bootstrap.tar.gz
         asset_name: router_upgrade_bootstrap.tar.gz
         asset_content_type: application/gzip
+
+    - name: Upload router_upgrade release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.release.outputs.upload_url }}
+        asset_path: dist/router_upgrade.tar.gz
+        asset_name: router_upgrade.tar.gz
+        asset_content_type: application/gzip        
