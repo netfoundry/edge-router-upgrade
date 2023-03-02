@@ -25,6 +25,7 @@ def start_upgrade(requested_version,
     logging.debug("Starting Upgrade")
     service_list = ["ziti-router", "ziti-tunnel"]
     running_version = get_print_versions(override,requested_version)
+    downgrade_check(requested_version, running_version)
 
     # compare and process if necessary
     if sv.Version(running_version) < sv.Version(requested_version) or override:
@@ -73,6 +74,15 @@ def check_update_systemd(ziti_version):
                 logging.debug("Found older binary for: ziti-%s", binary_name)
                 update_systemd_unitfile(binary_name)
                 os.remove(file_path)
+
+def downgrade_check(requested_version, running_version):
+    """
+    Check if this is going from anything above 0.27.0 and attempting to go below.
+    """
+    if sv.Version(running_version) >= sv.Version("0.27.0"):
+        if sv.Version(requested_version) < sv.Version("0.27.0"):
+            print("\033[0;31mERROR: Unable to downgrade, version is lower than 0.27.0")
+            sys.exit(1)
 
 def download_bundle(ziti_version):
     """
@@ -386,8 +396,8 @@ def main():
         override = False
 
     start_upgrade(requested_version,
-               auto_upgrade,
-               override)
+                  auto_upgrade,
+                  override)
 
     # exit properly
     sys.exit(0)
