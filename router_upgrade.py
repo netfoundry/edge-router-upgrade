@@ -150,7 +150,7 @@ def extract_controller_ip():
     # try to find controller info
     for config, binary in config_map.items():
         if os.path.isfile(config):
-            with open(config, "r") as file:
+            with open(config, "r",encoding='UTF-8') as file:
                 if binary == "ziti-router":
                     logging.debug("Trying to open router config")
                     try:
@@ -280,11 +280,11 @@ def update_systemd_unitfile(binary_name):
     logging.debug("Update systemd unit file")
     print("\033[0;31mWARN:\033[0m Upgraded to 0.27.0 and above. You can't use this program to downgrade to lower versions")
     try:
-        with open(service_unit, 'r') as openfile:
+        with open(service_unit, 'r',encoding='UTF-8') as openfile:
             lines = openfile.readlines()
         # Find the line to update
         for i, line in enumerate(lines):
-            if line.startswith('ExecStart'):
+            if line.startswith('ExecStart='):
                 if binary_name == "router":
                     lines[i] = ("ExecStart=/opt/netfoundry/ziti/ziti router run /opt/netfoundry/ziti/ziti-router/config.yml\n")
                 if binary_name == "tunnel":
@@ -294,7 +294,7 @@ def update_systemd_unitfile(binary_name):
             print("\033[0;31mERROR:\033[0m Unable to find the line to update")
             sys.exit(1)
 
-        with open(service_unit, 'w') as openfile:
+        with open(service_unit, 'w',encoding='UTF-8') as openfile:
             openfile.writelines(lines)
 
     except FileNotFoundError:
@@ -345,7 +345,7 @@ def main():
     """
     Main logic
     """
-    __version__ = '1.1.0'
+    __version__ = '1.1.1'
     #  Change log
     #  See https://github.com/netfoundry/edge-router-upgrade/blob/main/CHANGELOG.md
 
