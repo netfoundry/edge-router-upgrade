@@ -121,6 +121,7 @@ def download_bundle(ziti_version):
                         if member.name == "ziti":
                             logging.debug("Extracting: %s", member.name)
                             download_file.extract(member, "/opt/netfoundry/ziti/")
+                            os.chmod('/opt/netfoundry/ziti/ziti', 0o755)
                 os.remove(file_name)
                 return None
         if response.status_code == 404:
@@ -345,7 +346,7 @@ def main():
     """
     Main logic
     """
-    __version__ = '1.1.1'
+    __version__ = '1.1.2'
     #  Change log
     #  See https://github.com/netfoundry/edge-router-upgrade/blob/main/CHANGELOG.md
 
