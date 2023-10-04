@@ -346,7 +346,7 @@ def main():
     """
     Main logic
     """
-    __version__ = '1.1.2'
+    __version__ = '1.2.0'
     #  Change log
     #  See https://github.com/netfoundry/edge-router-upgrade/blob/main/CHANGELOG.md
 
