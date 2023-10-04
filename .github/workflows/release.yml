@@ -24,9 +24,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - name: Use pyinstall to create distribution binary
-      run: pyinstaller -F router_upgrade_bootstrap.py
+      run: pyinstaller -F router_upgrade_bootstrap.py --runtime-tmpdir /opt/netfoundry/
     - name: Use pyinstall to create main binary
-      run: pyinstaller -F router_upgrade.py  
+      run: pyinstaller -F router_upgrade.py --runtime-tmpdir /opt/netfoundry/
     - name: version
       run: echo "version=$(./dist/router_upgrade -v)" >> $GITHUB_ENV
       id: version
@@ -37,33 +37,16 @@ jobs:
     - name: Tar main script
       # tar with previous distibuted name for backwards compatibility
       run: cd dist; mv router_upgrade .router_upgrade; tar -zcvf router_upgrade.tar.gz .router_upgrade 
+
     - name: release
-      uses: actions/create-release@v1
+      uses: ncipollo/release-action@v1
       id: release
       with:
         draft: false
         prerelease: false
-        release_name: v${{ env.version }}
-        tag_name: v${{ env.version }}
+        tag: v${{ env.version }}
+        artifacts: "dist/router_upgrade_bootstrap.tar.gz,dist/router_upgrade.tar.gz"
+        artifactContentType: application/gzip
       env:
         GITHUB_TOKEN: ${{ github.token }}
 
-    - name: Upload router_upgrade bootstrap release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      with:
-        upload_url: ${{ steps.release.outputs.upload_url }}
-        asset_path: dist/router_upgrade_bootstrap.tar.gz
-        asset_name: router_upgrade_bootstrap.tar.gz
-        asset_content_type: application/gzip
-
-    - name: Upload router_upgrade release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      with:
-        upload_url: ${{ steps.release.outputs.upload_url }}
-        asset_path: dist/router_upgrade.tar.gz
-        asset_name: router_upgrade.tar.gz
-        asset_content_type: application/gzip        
