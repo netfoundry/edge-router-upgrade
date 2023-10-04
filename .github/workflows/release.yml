@@ -26,7 +26,7 @@ jobs:
     - name: Use pyinstall to create distribution binary
       run: pyinstaller -F router_upgrade_bootstrap.py --runtime-tmpdir /opt/netfoundry/
     - name: Use pyinstall to create main binary
-      run: pyinstaller -F router_upgrade.py --runtime-tmpdir /opt/netfoundry/
+      run: mkdir /opt/netfoundry; pyinstaller -F router_upgrade.py --runtime-tmpdir /opt/netfoundry/
     - name: version
       run: echo "version=$(./dist/router_upgrade -v)" >> $GITHUB_ENV
       id: version
