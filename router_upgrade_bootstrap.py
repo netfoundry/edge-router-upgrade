@@ -5,6 +5,7 @@ NetFoundry Edge Router Upgrade bootstrap script
 import os
 import sys
 import time
+import json
 import subprocess
 import tarfile
 from tqdm import tqdm
@@ -28,6 +29,38 @@ def compare_dates(file_name):
     if os.stat(file_name).st_atime < current_time_in_seconds - 86400:
         return True
     return False
+
+def local_config():
+    """
+    Attempt to load config file & return download url
+    """
+    download_url = ("https://github.com/netfoundry/edge-router-upgrade/"
+                    "releases/latest/download/router_upgrade.tar.gz")
+    # load custom url from file
+    if os.path.exists("/etc/script_config.json"):
+        try:
+            with open("/etc/script_config.json", 'r', encoding='utf-8') as config_file:
+                config = json.load(config_file)
+                if "upgrade_script_url" in config:
+                    download_url = config.get('upgrade_script_url')
+                    print("Loading upgrade_script_url from /etc/script_config.json")
+                    print("Value:" + download_url)
+                    return download_url
+                if "repository_base_url" in config:
+                    base_url = config.get('repository_base_url')
+                    print("Loading repository_base_url from /etc/script_config.json")
+                    print("Value: " + base_url)
+                    download_url = (base_url + "/edge-router-upgrade/releases/" +
+                                    "latest/download/router_upgrade.tar.gz")
+                    return download_url
+                print("WARNING: found /etc/script_config.json, "
+                          "but was unable to find any keys")
+                return download_url
+        except json.JSONDecodeError:
+            print("WARNING: Unable to parse json file /etc/script_config.json")
+            return download_url
+    else:
+        return download_url
 
 def download_file(source_url):
     """
@@ -69,14 +102,13 @@ def main():
     #__version__ = '1.0.0'
     # change log
     # 1.0.0 - initial release
+    # 1.1.0 - Added config file
 
     # define static variables
     router_upgrade_script = "/opt/netfoundry/.router_upgrade"
-    download_url = ("https://github.com/netfoundry/edge-router-upgrade/"
-                    "releases/latest/download/router_upgrade.tar.gz")
 
     # run root check
-    #root_check()
+    root_check()
 
     # only compare if file exists
     do_update = False
@@ -91,6 +123,7 @@ def main():
     # only download if update is needed
     if do_update:
         cleanup_file(router_upgrade_script)
+        download_url = local_config()
         download_file(download_url)
 
     # run script

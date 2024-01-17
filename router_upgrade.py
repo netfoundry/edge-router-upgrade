@@ -17,6 +17,7 @@ import requests
 import urllib3
 
 def start_upgrade(requested_version,
+                  download_url,
                   auto=False,
                   override=False):
     """
@@ -49,7 +50,7 @@ def start_upgrade(requested_version,
             check_update_systemd(requested_version)
 
             # download and extract file
-            download_bundle(requested_version)
+            download_bundle(download_url)
 
             for service in service_list:
                 # check if service is enabled
@@ -60,6 +61,37 @@ def start_upgrade(requested_version,
             print("Upgraded successfully")
     else:
         print("Already up to date")
+
+def local_config(requested_version):
+    """
+    Attempt to load config file & return download url
+    """
+    download_url=("https://github.com/openziti/ziti/releases/download/v" + requested_version +
+                  "/ziti-linux-amd64-" + requested_version + ".tar.gz")
+    # load custom url from file
+    if os.path.exists("/etc/script_config.json"):
+        try:
+            with open("/etc/script_config.json", 'r', encoding='utf-8') as config_file:
+                config = json.load(config_file)
+                if "repository_base_url" in config:
+                    base_url = config.get('repository_base_url')
+                    print("Loading repository_base_url from /etc/script_config.json")
+                    print("Value: " + base_url)
+                    download_url = (base_url +
+                                    "/openziti/ziti/releases/download/v" +
+                                    requested_version +
+                                    "/ziti-linux-amd64-" +
+                                    requested_version +
+                                    ".tar.gz")
+                    return download_url
+                print("WARNING: found /etc/script_config.json, "
+                          "but was unable to find any keys")
+                return download_url
+        except json.JSONDecodeError:
+            print("WARNING: Unable to parse json file /etc/script_config.json")
+            return download_url
+    else:
+        return download_url
 
 def check_update_systemd(ziti_version):
     """
@@ -84,12 +116,11 @@ def downgrade_check(requested_version, running_version):
             print("\033[0;31mERROR: Unable to downgrade, version is lower than 0.27.0")
             sys.exit(1)
 
-def download_bundle(ziti_version):
+def download_bundle(download_url):
     """
     Download ziti bundle & extract files
     """
-    download_url=("https://github.com/openziti/ziti/releases/download/v" + ziti_version +
-                  "/ziti-linux-amd64-" + ziti_version + ".tar.gz")
+
     try:
         print("Downloading bundle")
         file_name="router_upgrade.tar.gz"
@@ -279,7 +310,8 @@ def update_systemd_unitfile(binary_name):
     """
     service_unit = "/etc/systemd/system/ziti-" + binary_name + ".service"
     logging.debug("Update systemd unit file")
-    print("\033[0;31mWARN:\033[0m Upgraded to 0.27.0 and above. You can't use this program to downgrade to lower versions")
+    print("\033[0;31mWARN:\033[0m Upgraded to 0.27.0 and above. "
+          "You can't use this program to downgrade to lower versions")
     try:
         with open(service_unit, 'r',encoding='UTF-8') as openfile:
             lines = openfile.readlines()
@@ -287,7 +319,8 @@ def update_systemd_unitfile(binary_name):
         for i, line in enumerate(lines):
             if line.startswith('ExecStart='):
                 if binary_name == "router":
-                    lines[i] = ("ExecStart=/opt/netfoundry/ziti/ziti router run /opt/netfoundry/ziti/ziti-router/config.yml\n")
+                    lines[i] = ("ExecStart=/opt/netfoundry/ziti/ziti router run "
+                                "/opt/netfoundry/ziti/ziti-router/config.yml\n")
                 if binary_name == "tunnel":
                     lines[i] = 'ExecStart=/opt/netfoundry/ziti/ziti tunnel run\n'
                 break
@@ -346,7 +379,7 @@ def main():
     """
     Main logic
     """
-    __version__ = '1.2.0'
+    __version__ = '1.3.0'
     #  Change log
     #  See https://github.com/netfoundry/edge-router-upgrade/blob/main/CHANGELOG.md
 
@@ -362,6 +395,8 @@ def main():
     parser.add_argument('-d', '--debug',
                         action='store_true',
                         help='enable debug log in log file output')
+    parser.add_argument('--downloadUrl', type=str,
+                        help='Specify bundle to download')
     parser.add_argument('-v', '--version',
                         action='version',
                         version=__version__)
@@ -396,7 +431,15 @@ def main():
         requested_version = get_ziti_controller_version("https://" + controller_ip)
         override = False
 
-    start_upgrade(requested_version,
+    # determine download url
+    if args.DownloadUrl:
+        download_url = args.downloadUrl
+    else:
+        download_url = local_config(requested_version)
+
+    # start upgrade
+    start_upgrade(download_url,
+                  requested_version,
                   auto_upgrade,
                   override)
 
