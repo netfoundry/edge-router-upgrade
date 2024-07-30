@@ -203,7 +203,7 @@ def get_ziti_controller_version(controller_url):
     response = None
     http_code = 0
     try:
-        endpoint_url = controller_url + "/edge/v1/version"
+        endpoint_url = controller_url + "/edge/client/v1/version"
         logging.debug('Attempting to access %s', endpoint_url)
         urllib3.disable_warnings()
         response = requests.get(endpoint_url, verify=False, timeout=30)
@@ -346,7 +346,7 @@ def main():
     """
     Main logic
     """
-    __version__ = '1.2.0'
+    __version__ = '1.2.1'
     #  Change log
     #  See https://github.com/netfoundry/edge-router-upgrade/blob/main/CHANGELOG.md
 
