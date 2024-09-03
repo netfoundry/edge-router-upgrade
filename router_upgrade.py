@@ -18,12 +18,16 @@ import urllib3
 
 def start_upgrade(requested_version,
                   auto=False,
-                  override=False):
+                  override=False,
+                  controller=False):
     """
     Upgrade
     """
     logging.debug("Starting Upgrade")
     service_list = ["ziti-router", "ziti-tunnel"]
+    if controller:
+        service_list.append("ziti-controller")
+        print("WARN: Upgrading controller does not update the configuration nor update MOP version")
     running_version = get_print_versions(override,requested_version)
     downgrade_check(requested_version, running_version)
 
@@ -65,7 +69,7 @@ def check_update_systemd(ziti_version):
     """
     Check
     """
-    binary_list=['router','tunnel']
+    binary_list=['router','tunnel','controller']
     if sv.Version(ziti_version) >= sv.Version("0.27.0"):
         logging.debug("Version os 0.27.0 or above..Checking systemd")
         for binary_name in binary_list:
@@ -118,6 +122,10 @@ def download_bundle(ziti_version):
                             if member.name == "ziti-tunnel":
                                 logging.debug("Extracting: %s", member.name)
                                 download_file.extract(member, "/opt/netfoundry/ziti/ziti-tunnel/")
+                        if os.path.isfile("/opt/netfoundry/ziti/ziti-controller/ziti-controller"):
+                            if member.name == "ziti-controller":
+                                logging.debug("Extracting: %s", member.name)
+                                download_file.extract(member, "/opt/netfoundry/ziti/ziti-controller/")
                         if member.name == "ziti":
                             logging.debug("Extracting: %s", member.name)
                             download_file.extract(member, "/opt/netfoundry/ziti/")
@@ -182,6 +190,7 @@ def get_print_versions(override, requested_version):
     binary_map = {
                   "/opt/netfoundry/ziti/ziti-router/ziti-router": "ziti-router",
                   "/opt/netfoundry/ziti/ziti-tunnel/ziti-tunnel": "ziti-tunnel",
+                  "/opt/netfoundry/ziti/ziti-controller/ziti-controller": "ziti-controller",
                   "/opt/netfoundry/ziti/ziti": "ziti"
                   }
     version_map = {}
@@ -290,6 +299,8 @@ def update_systemd_unitfile(binary_name):
                     lines[i] = ("ExecStart=/opt/netfoundry/ziti/ziti router run /opt/netfoundry/ziti/ziti-router/config.yml\n")
                 if binary_name == "tunnel":
                     lines[i] = 'ExecStart=/opt/netfoundry/ziti/ziti tunnel run\n'
+                if binary_name == "controller":
+                    lines[i] = ("ExecStart=/opt/netfoundry/ziti/ziti controller run /opt/netfoundry/ziti/ziti-controller/conf/controller01.config.yml\n")
                 break
         else:
             print("\033[0;31mERROR:\033[0m Unable to find the line to update")
@@ -346,7 +357,7 @@ def main():
     """
     Main logic
     """
-    __version__ = '1.2.1'
+    __version__ = '1.3.0'
     #  Change log
     #  See https://github.com/netfoundry/edge-router-upgrade/blob/main/CHANGELOG.md
 
@@ -386,19 +397,28 @@ def main():
 
     auto_upgrade = bool(args.auto)
 
-    controller_ip = extract_controller_ip()
+    controller = False
+    if os.path.exists("/opt/netfoundry/ziti/ziti-controller"):
+        controller = True
+
+    if not controller:
+        controller_ip = extract_controller_ip()
 
     # determine version
     if args.override_version:
         requested_version = args.override_version
         override = True
     else:
+        if controller:
+            print("This is a controller, you must specify an override using -o")
+            sys.exit(1)
         requested_version = get_ziti_controller_version("https://" + controller_ip)
         override = False
 
     start_upgrade(requested_version,
                   auto_upgrade,
-                  override)
+                  override,
+                  controller)
 
     # exit properly
     sys.exit(0)
