@@ -16,7 +16,8 @@ import semantic_version as sv
 import requests
 import urllib3
 
-def start_upgrade(requested_version,
+def start_upgrade(download_url,
+                  requested_version,
                   auto=False,
                   override=False):
     """
@@ -25,12 +26,12 @@ def start_upgrade(requested_version,
     logging.debug("Starting Upgrade")
     service_list = ["ziti-router", "ziti-tunnel"]
     running_version = get_print_versions(override,requested_version)
-    downgrade_check(requested_version, running_version)
 
     # compare and process if necessary
     if sv.Version(running_version) < sv.Version(requested_version) or override:
         if override:
-            print("Override Requested, forcing version: " + requested_version)
+            downgrade_check(requested_version, running_version)
+            print("Override Requested, forcing version.")
         else:
             print("Controller is higher than Local")
 
@@ -49,7 +50,7 @@ def start_upgrade(requested_version,
             check_update_systemd(requested_version)
 
             # download and extract file
-            download_bundle(requested_version)
+            download_bundle(download_url)
 
             for service in service_list:
                 # check if service is enabled
@@ -84,12 +85,10 @@ def downgrade_check(requested_version, running_version):
             print("\033[0;31mERROR: Unable to downgrade, version is lower than 0.27.0")
             sys.exit(1)
 
-def download_bundle(ziti_version):
+def download_bundle(download_url):
     """
     Download ziti bundle & extract files
     """
-    download_url=("https://github.com/openziti/ziti/releases/download/v" + ziti_version +
-                  "/ziti-linux-amd64-" + ziti_version + ".tar.gz")
     try:
         print("Downloading bundle")
         file_name="router_upgrade.tar.gz"
@@ -279,7 +278,8 @@ def update_systemd_unitfile(binary_name):
     """
     service_unit = "/etc/systemd/system/ziti-" + binary_name + ".service"
     logging.debug("Update systemd unit file")
-    print("\033[0;31mWARN:\033[0m Upgraded to 0.27.0 and above. You can't use this program to downgrade to lower versions")
+    print("\033[0;31mWARN:\033[0m Upgraded to 0.27.0 and above."
+          " You can't use this program to downgrade to lower versions")
     try:
         with open(service_unit, 'r',encoding='UTF-8') as openfile:
             lines = openfile.readlines()
@@ -287,7 +287,8 @@ def update_systemd_unitfile(binary_name):
         for i, line in enumerate(lines):
             if line.startswith('ExecStart='):
                 if binary_name == "router":
-                    lines[i] = ("ExecStart=/opt/netfoundry/ziti/ziti router run /opt/netfoundry/ziti/ziti-router/config.yml\n")
+                    lines[i] = ("ExecStart=/opt/netfoundry/ziti/ziti router"
+                                " run /opt/netfoundry/ziti/ziti-router/config.yml\n")
                 if binary_name == "tunnel":
                     lines[i] = 'ExecStart=/opt/netfoundry/ziti/ziti tunnel run\n'
                 break
@@ -346,19 +347,22 @@ def main():
     """
     Main logic
     """
-    __version__ = '1.2.1'
+    __version__ = '1.2.2'
     #  Change log
     #  See https://github.com/netfoundry/edge-router-upgrade/blob/main/CHANGELOG.md
 
     # argument parser
     parser = argparse.ArgumentParser()
     # arguments
+    mgroup = parser.add_mutually_exclusive_group(required=False)
+    mgroup.add_argument('--downloadUrl', type=str,
+                        help='Specify bundle to download')
+    mgroup.add_argument('-o', '--override_version',
+                        help='override the controller version')
     parser.add_argument('-y', '--yes',
                         dest='auto',
                         action='store_true',
                         help='automatically answer yes to upgrade prompt')
-    parser.add_argument('-o', '--override_version',
-                        help='override the controller version')
     parser.add_argument('-d', '--debug',
                         action='store_true',
                         help='enable debug log in log file output')
@@ -388,15 +392,25 @@ def main():
 
     controller_ip = extract_controller_ip()
 
-    # determine version
-    if args.override_version:
-        requested_version = args.override_version
+    # determine version & download url
+    if args.downloadUrl:
+        download_url = args.downloadUrl
+        requested_version = "9.9.9"
         override = True
     else:
-        requested_version = get_ziti_controller_version("https://" + controller_ip)
-        override = False
+        if args.override_version:
+            requested_version = args.override_version
+            override = True
+        else:
+            requested_version = get_ziti_controller_version("https://" + controller_ip)
+            override = False
 
-    start_upgrade(requested_version,
+        download_url=("https://github.com/openziti/ziti/releases/download/v"
+                    + requested_version +
+                    "/ziti-linux-amd64-" + requested_version + ".tar.gz")
+
+    start_upgrade(download_url,
+                  requested_version,
                   auto_upgrade,
                   override)
 
